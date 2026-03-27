@@ -1,7 +1,28 @@
 from flask import Flask, render_template, request, redirect, url_for, session
+import csv
+import os
+from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = "change-this-key"
+
+# -----------------------------
+# WELCOME PAGE
+# -----------------------------
+@app.route("/", methods=["GET"])
+def welcome():
+    return render_template("welcome.html")
+
+# -----------------------------
+# START SURVEY (POST)
+# -----------------------------
+@app.route("/start", methods=["POST"])
+def begin_survey():
+    name = request.form.get("name")
+    session["name"] = name
+    session["answers"] = []
+    return redirect(url_for("question", index=0))
+
 
 # 72 questions (replace with your real text)
 QUESTIONS = [
@@ -231,12 +252,40 @@ GIFT_DETAILS = {
     }
 }
 
+@app.route("/question/<int:index>", methods=["GET", "POST"])
+def question(index):
+    if "answers" not in session:
+        session["answers"] = []
 
+    answers = session["answers"]
+
+    if request.method == "POST":
+        value = int(request.form["value"])
+        answers.append(value)
+        session["answers"] = answers
+
+        if index + 1 >= len(QUESTIONS):
+            return redirect(url_for("results"))
+
+        return redirect(url_for("question", index=index + 1))
+
+    question_text = QUESTIONS[index]
+    return render_template(
+        "question.html",
+        question=question_text,
+        q_number=index + 1,
+        total=len(QUESTIONS)
+    )
+
+
+"""
 @app.route("/")
 def start():
     session["answers"] = []
     return redirect(url_for("question", index=0))
+"""
 
+"""
 @app.route("/question/<int:index>", methods=["GET", "POST"])
 def question(index):
     if "answers" not in session:
@@ -260,7 +309,10 @@ def question(index):
         q_number=index + 1,
         total=len(QUESTIONS)
     )
-
+"""
+# -----------------------------
+# COMPUTE SCORES
+# -----------------------------
 def compute_scores(answers):
     group_scores = [0] * 24
     for i, val in enumerate(answers):
@@ -279,20 +331,65 @@ def compute_scores(answers):
         })
     return results
 
+# -----------------------------
+# SAVE RESULTS TO CSV
+# -----------------------------
+def save_results(name, top_five):
+    folder = "results"
+    os.makedirs(folder, exist_ok=True)
+
+    filepath = os.path.join(folder, "survey_results.csv")
+
+    date = datetime.now().strftime("%Y-%m-%d %H:%M")
+
+    row = [name]
+    for gift in top_five:
+        row.append(f"{gift['word']},{gift['score']}")
+    row.append(date)
+
+    write_header = not os.path.exists(filepath)
+
+    with open(filepath, "a", newline="") as f:
+        writer = csv.writer(f)
+        if write_header:
+            writer.writerow(["Name", "Gift1", "Gift2", "Gift3", "Gift4", "Gift5", "Date"])
+        writer.writerow(row)
+
+# -----------------------------
+# RESULTS PAGE — FIXED
+# -----------------------------
 @app.route("/results")
 def results():
     answers = session.get("answers", [])
     if len(answers) != len(QUESTIONS):
-        return redirect(url_for("start"))
+        return redirect(url_for("welcome"))
+
+    name = session.get("name", "Guest")
 
     results = compute_scores(answers)
 
-    # Attach gift details for high scores
-    for r in results:
+    # Sort by score
+    sorted_results = sorted(results, key=lambda x: x["score"], reverse=True)
+
+    top_five = sorted_results[:5]
+    all_gifts = sorted_results
+
+    # Attach details to top five
+    for g in top_five:
+        g["details"] = GIFT_DETAILS.get(g["letter"], {})
+
+    # Attach details for high scores in all gifts
+    for r in all_gifts:
         if r["score"] >= 8:
             r["details"] = GIFT_DETAILS.get(r["letter"], {})
 
-    return render_template("results.html", results=results)
+    # Save to CSV
+    save_results(name, top_five)
 
+    return render_template("results.html", name=name, top_five=top_five, all_gifts=all_gifts)
+
+# -----------------------------
+# RUN APP
+# -----------------------------
 if __name__ == "__main__":
     app.run(debug=True)

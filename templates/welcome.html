@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="center">
+
+    <img src="{{ url_for('static', filename='logo_bw.png') }}" 
+         alt="Church Logo" 
+         style="width:180px; margin-bottom:20px;">
+
+    <h1>Welcome</h1>
+    <h2>Let's Find Our Spiritual Gifts</h2>
+
+    <form action="{{ url_for('begin_survey') }}" method="POST" style="margin-top: 20px;">
+        <input type="text" name="name" placeholder="Enter your name" 
+               required
+               style="padding: 10px; font-size: 18px; width: 250px;">
+
+        <br><br>
+
+        <button type="submit"
+                style="font-size:22px; padding:12px 30px;">
+            Start
+        </button>
+    </form>
+
+</div>
+
+{% endblock %}

@@ -1,18 +1,38 @@
+{% extends "base.html" %}
+
 {% block content %}
 
-<h1>Your Results</h1>
+<div class="center" style="padding-top: 40px;">
 
-{% for r in results %}
-    <div class="gift-card">
-        <h2>{{ r.letter }} — {{ r.word }} (Score: {{ r.score }})</h2>
+    <h1>{{ name }}, your Top 5 Spiritual Gifts are:</h1>
 
-        {% if r.details %}
-            <p><strong>Definition:</strong> {{ r.details.definition }}</p>
-            <p><strong>Scripture:</strong> {{ r.details.verses }}</p>
-            <p><strong>Ministry Fit:</strong> {{ r.details.applications }}</p>
-        {% endif %}
-    </div>
-{% endfor %}
+    <ol style="font-size: 22px; margin-bottom: 30px;">
+        {% for gift in top_five %}
+            <li style="margin-bottom: 25px;">
+                <strong>{{ gift.word }}</strong> — {{ gift.score }}
+
+                <div style="font-size: 16px; margin-top: 10px; line-height: 1.4;">
+                    <p><strong>Definition:</strong> {{ gift.details.definition }}</p>
+                    <p><strong>Verses:</strong> {{ gift.details.verses }}</p>
+                    <p><strong>Applications:</strong> {{ gift.details.applications }}</p>
+                </div>
+            </li>
+        {% endfor %}
+    </ol>
+
+    <h2>All 24 Gifts Ranked</h2>
+
+    <ul style="list-style: none; padding: 0; font-size: 18px;">
+        {% for gift in all_gifts %}
+            <li>{{ gift.word }} — {{ gift.score }}</li>
+        {% endfor %}
+    </ul>
+
+    <a href="{{ url_for('welcome') }}" 
+       style="margin-top: 30px; display: inline-block; padding: 12px 30px; font-size: 20px;">
+        Back to Start
+    </a>
+
+</div>
 
 {% endblock %}
-
